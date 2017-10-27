@@ -26,6 +26,12 @@ GG97OTUSDB="/databases/gg/13_8/sortmerna/97_otus"
 # DEFINE METADATA CATEGORY TO DO COMPARISONS
 MDCAT="host_subject_id"
 
+############################################################################
+## DO NOT MODIFY ANYTHING BELOW HERE UNLESS YOU ARE CHANGING THE WORKFLOW ##
+############################################################################
+
+PBSMAIL="-m abe -M ${EMAIL}"
+
 # Check that all inputs have been provided
 if [ "$#" -ne 4 ]; then
     echo "USAGE: rr_workflow.sh FORWARD_READS_FASTQ BARCODE_READS_FASTQ MAPPING_FILE OUTPUT_DIR"
@@ -57,53 +63,61 @@ if [ -d ${OUTDIR} ]; then
     exit 1
 fi
 
+#######################
+## UPSTREAM ANALYSES ##
+#######################
+
 # Create the output directory
 mkdir ${OUTDIR}
 
 # Run split libraries
 SLOUTDIR=${OUTDIR}/sl_out
-echo "${Q1ENV}; split_libraries_fastq.py -i ${FWDREADS} -b ${BCDREADS} -m ${MAPFP} -o ${SLOUTDIR} --rev_comp_barcode --rev_comp_mapping_barcodes"
+SLJID=`echo "${Q1ENV}; split_libraries_fastq.py -i ${FWDREADS} -b ${BCDREADS} -m ${MAPFP} -o ${SLOUTDIR} --rev_comp_barcode --rev_comp_mapping_barcodes" | qsub -N RRSL -l walltime=6:00:00 ${PBSMAIL}`
 
 # Run deblurring
 DEBLUROUT=${OUTDIR}/deblur_out
-echo "${Q2ENV}; deblur workflow --seqs-fp ${SLOUTDIR}/seqs.fna --output-dir ${DEBLUROUT} -t 150 -O 31 --pos-ref-db-fp ${GG88OTUSDB} --pos-ref-fp ${GG88OTUS}"
+DEBLURJID=`echo "${Q2ENV}; deblur workflow --seqs-fp ${SLOUTDIR}/seqs.fna --output-dir ${DEBLUROUT} -t 150 -O 31 --pos-ref-db-fp ${GG88OTUSDB} --pos-ref-fp ${GG88OTUS}" | qsub -N RRDEBLUR -l walltime=2:00:00 -l nodes=1:ppn=32 -W depend-afterok:${SLJID} ${PBSMAIL}`
 
 # Assign taxonomy
 ATAXOUT=${OUTDIR}/atax_out
-echo "${Q1ENV}; assign_taxonomy.py -i ${DEBLUROUT}/reference-hit.seqs.fa -o ${ATAXOUT} -m sortmerna --sortmerna_threads 31 -r ${GG97OTUS} -t ${GG97TAX} --sortmerna_db ${GG97OTUSDB} --sortmerna_threads 31"
+ATAXJID=`echo "${Q1ENV}; assign_taxonomy.py -i ${DEBLUROUT}/reference-hit.seqs.fa -o ${ATAXOUT} -m sortmerna --sortmerna_threads 31 -r ${GG97OTUS} -t ${GG97TAX} --sortmerna_db ${GG97OTUSDB} --sortmerna_threads 31" | qsub -N RRATAX -l walltime=2:00:00 -l nodes=1:ppn=32 -W depend-afterok:${DEBLURJID} ${PBSMAIL}`
 BIOMFP=${OUTDIR}/reference_hit_w_tax.biom
-echo "${Q1ENV}; biom add-metadata -i ${DEBLUROUT}/reference-hit.biom -o ${BIOMFP} --observation-metadata-fp ${ATAXOUT}/reference-hit.seqs_tax_assignments.txt --observation-header OTUID,taxonomy --sc-separated taxonomy"
+ADDMETAJID=`echo "${Q1ENV}; biom add-metadata -i ${DEBLUROUT}/reference-hit.biom -o ${BIOMFP} --observation-metadata-fp ${ATAXOUT}/reference-hit.seqs_tax_assignments.txt --observation-header OTUID,taxonomy --sc-separated taxonomy" | qsub -N RRADDMETA -l walltime=0:15:00 -W depend-afterok:${ATAXJID} ${PBSMAIL}`
 
 # Generate a phylogenetic tree with SEPP
 SEPPOUT=${OUTDIR}/sepp_out
-echo "${SEPPENV}; mkdir ${SEPPOUT}; cd ${SEPPOUT}; run-sepp.sh ${DEBLUROUT}/reference-hit.seqs.fa reference-hit -x 31"
+SEPPJID=`echo "${SEPPENV}; mkdir ${SEPPOUT}; cd ${SEPPOUT}; run-sepp.sh ${DEBLUROUT}/reference-hit.seqs.fa reference-hit -x 31" | qsub -N RRSEPP -l walltime=2:00:00 -l nodes=1:ppn=32 -W depend-afterok:${DEBLURJID} ${PBSMAIL}`
 # Import the tree for QIIME 2
 Q2TREE=${OUTDIR}/reference-hit-tree.qza
-echo "${Q2ENV}; qiime tools import --input-path ${SEPPOUT}/reference-hit_placement.tog.relabelled.tre --output-path ${Q2TREE} --type \"Phylogeny[Rooted]\""
+TREEIMPJID=`echo "${Q2ENV}; qiime tools import --input-path ${SEPPOUT}/reference-hit_placement.tog.relabelled.tre --output-path ${Q2TREE} --type \"Phylogeny[Rooted]\"" | qsub -N RRTREEIMP -l walltime=0:10:00 -W depend-afterok:${SEPPJID} ${PBSMAIL}`
 
 # Generate a BIOM table summary using Qiime 2
-echo "${Q2ENV}; qiime tools import --input-path ${BIOMFP} --output-path ${OUTDIR}/q2_biom.qza --type \"FeatureTable[Frequency]\""
-echo "${Q2ENV}; qiime feature-table summarize --i-table ${OUTDIR}/q2_biom.qza --o-visualization ${OUTDIR}/q2_biom_summary.qzv --m-sample-metadata-file ${MAPFP}"
+BIOMIMPJID=`echo "${Q2ENV}; qiime tools import --input-path ${BIOMFP} --output-path ${OUTDIR}/q2_biom.qza --type \"FeatureTable[Frequency]\"" | qsub -N RRBIOMIMP -l walltime=0:15:00 -W depend-afterok:${ADDMETAJID} ${PBSMAIL}`
+BIOMSUMPJI=`echo "${Q2ENV}; qiime feature-table summarize --i-table ${OUTDIR}/q2_biom.qza --o-visualization ${OUTDIR}/q2_biom_summary.qzv --m-sample-metadata-file ${MAPFP}" | qsub -N RRBIOMSUM -l walltime=0:30:00 -W depend-afterok:${BIOMIMPJID} ${PBSMAIL}`
+
+#########################
+## DOWNSTREAM ANALYSES ##
+#########################
 
 # We are going to do the analysis in 3 different rarefaction levels: 1000, 5000 and 10000
 for depth in 1000 5000 10000
 do
     EVENOUT=${OUTDIR}/even_${depth}
     # Rarefy the BIOM table
-    echo "${Q1ENV}; mkdir ${EVENOUT}; single_rarefaction.py -i ${BIOMFP} -o ${EVENOUT}/biom_table_even_${depth}.biom -d ${depth}"
+    SRJID=`echo "${Q1ENV}; mkdir ${EVENOUT}; single_rarefaction.py -i ${BIOMFP} -o ${EVENOUT}/biom_table_even_${depth}.biom -d ${depth}" | qsub -N RRSR${depth} -l walltime=0:30:00 -W depend-afterok:${ADDMETAJID} ${PBSMAIL}`
 
     # Import the needed files to QIIME2
     Q2BIOM=${EVENOUT}/biom_even_${depth}.qza
     Q2TAX=${EVENOUT}/taxonomy.qza
-    echo "${Q2ENV}; qiime tools import --input-path ${EVENOUT}/biom_table_even_${depth}.biom --output-path ${Q2BIOM} --type \"FeatureTable[Frequency] % Properties(['uniform-sampling'])\""
-    echo "${Q2ENV}; cmirr export-taxonomy -i ${EVENOUT}/biom_table_even_${depth}.biom -o ${EVENOUT}/taxonomy.txt"
-    echo "${Q2ENV}; qiime tools import --input-path ${EVENOUT}/taxonomy.txt --output-path ${Q2TAX} --type \"FeatureData[Taxonomy]\""
+    EBIOMIMPJID=`echo "${Q2ENV}; qiime tools import --input-path ${EVENOUT}/biom_table_even_${depth}.biom --output-path ${Q2BIOM} --type \"FeatureTable[Frequency] % Properties(['uniform-sampling'])\"" | qsub -N RRBIOMIMP${depth} -l walltime=0:15:00 -W depend-afterok:${SRJID} ${PBSMAIL}`
+    ETAXEXPPJID=`echo "${Q2ENV}; cmirr export-taxonomy -i ${EVENOUT}/biom_table_even_${depth}.biom -o ${EVENOUT}/taxonomy.txt" | qsub -N RRTAXEXP${depth} -l walltime=0:15:00 -W depend-afterok:${SRJID} ${PBSMAIL}`
+    ETAXIMPPJID=`echo "${Q2ENV}; qiime tools import --input-path ${EVENOUT}/taxonomy.txt --output-path ${Q2TAX} --type \"FeatureData[Taxonomy]\"" | qsub -N RRTAXIMP${depth} -l walltime=0:15:00 -W depend-afterok:${ETAXEXPPJID} ${PBSMAIL}`
 
     # Run beta diversity - we run 2 metrics: Unweighted UniFrac and Weighted Unifrac
     for metric in "unweighted_unifrac" "weighted_unifrac"
     do
         Q2DM=${EVENOUT}/bdiv_${metric}_dm.qza
-        echo "${Q2ENV}; qiime diversity beta-phylogenetic-alt -p-metric ${metric} --i-table ${Q2BIOM} --i-phylogeny ${Q2TREE} --o-distance-matrix ${Q2DM} --p-n-jobs 31"
+        BDIVJIB=`echo "${Q2ENV}; qiime diversity beta-phylogenetic-alt -p-metric ${metric} --i-table ${Q2BIOM} --i-phylogeny ${Q2TREE} --o-distance-matrix ${Q2DM} --p-n-jobs 31" | qsub -N RRBD${depth}${metric} -l walltime=4:00:00 -W depend-afterok:JOB1:JOB2`
 
         # Generate a emperor plot
         Q2PC=${EVENOUT}/bdiv_${metric}_pc.qza
@@ -132,5 +146,5 @@ do
 
     # Run differential abundance with ANCOM
     echo "${Q2ENV}; qiime composition add-pseudocount --i-table ${Q2BIOM} --o-composition-table ${EVENOUT}/composition_biom.qza"
-    echo "${Q2ENV}; qiime composition ancom --i-table ${EVENOUT}/composition_biom.qza --m-metadata-file ${MAPFP} --m-metadata-category ${MDCAT} --o-visualization ${EVENOUT}ancom.qzv"
+    echo "${Q2ENV}; qiime composition ancom --i-table ${EVENOUT}/composition_biom.qza --m-metadata-file ${MAPFP} --m-metadata-category ${MDCAT} --o-visualization ${EVENOUT}/ancom.qzv"
 done
