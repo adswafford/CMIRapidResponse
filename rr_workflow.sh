@@ -110,7 +110,7 @@ do
     Q2BIOM=${EVENOUT}/biom_even_${depth}.qza
     Q2TAX=${EVENOUT}/taxonomy.qza
     EBIOMIMPJID=`echo "${Q2ENV}; qiime tools import --input-path ${EVENOUT}/biom_table_even_${depth}.biom --output-path ${Q2BIOM} --type \"FeatureTable[Frequency] % Properties(['uniform-sampling'])\"" | qsub -N RRBIOMIMP${depth} -l walltime=0:15:00 -W depend-afterok:${SRJID} ${PBSMAIL}`
-    ETAXEXPPJID=`echo "${Q2ENV}; cmirr export-taxonomy -i ${EVENOUT}/biom_table_even_${depth}.biom -o ${EVENOUT}/taxonomy.txt" | qsub -N RRTAXEXP${depth} -l walltime=0:15:00 -W depend-afterok:${SRJID} ${PBSMAIL}`
+    ETAXEXPPJID=`echo "${Q2ENV}; cmirr export-taxonomy --input-biom ${EVENOUT}/biom_table_even_${depth}.biom --output-taxa ${EVENOUT}/taxonomy.txt" | qsub -N RRTAXEXP${depth} -l walltime=0:15:00 -W depend-afterok:${SRJID} ${PBSMAIL}`
     ETAXIMPPJID=`echo "${Q2ENV}; qiime tools import --input-path ${EVENOUT}/taxonomy.txt --output-path ${Q2TAX} --type \"FeatureData[Taxonomy]\"" | qsub -N RRTAXIMP${depth} -l walltime=0:15:00 -W depend-afterok:${ETAXEXPPJID} ${PBSMAIL}`
 
     # Run beta diversity - we run 2 metrics: Unweighted UniFrac and Weighted Unifrac
