@@ -24,7 +24,7 @@ GG97TAX="/databases/gg/13_8/taxonomy/97_otu_taxonomy.txt"
 GG97OTUSDB="/databases/gg/13_8/sortmerna/97_otus"
 
 # DEFINE METADATA CATEGORY TO DO COMPARISONS
-MDCAT="host_subject_id"
+MDCAT="rr_test_group"
 
 ############################################################################
 ## DO NOT MODIFY ANYTHING BELOW HERE UNLESS YOU ARE CHANGING THE WORKFLOW ##
@@ -117,34 +117,34 @@ do
     for metric in "unweighted_unifrac" "weighted_unifrac"
     do
         Q2DM=${EVENOUT}/bdiv_${metric}_dm.qza
-        BDIVJIB=`echo "${Q2ENV}; qiime diversity beta-phylogenetic-alt -p-metric ${metric} --i-table ${Q2BIOM} --i-phylogeny ${Q2TREE} --o-distance-matrix ${Q2DM} --p-n-jobs 31" | qsub -N RRBD${depth}${metric} -l walltime=4:00:00 -W depend-afterok:JOB1:JOB2`
+        BDIVJID=`echo "${Q2ENV}; qiime diversity beta-phylogenetic-alt -p-metric ${metric} --i-table ${Q2BIOM} --i-phylogeny ${Q2TREE} --o-distance-matrix ${Q2DM} --p-n-jobs 31" | qsub -N RRBD${depth}${metric} -l walltime=4:00:00 -l nodes=1:ppn=32 -W depend-afterok:${EBIOMIMPJID}:${TREEIMPJID}`
 
         # Generate a emperor plot
         Q2PC=${EVENOUT}/bdiv_${metric}_pc.qza
-        echo "${Q2ENV}; qiime diversity pcoa --i-distance-matrix ${Q2DM} --o-pcoa ${Q2PC}"
-        echo "${Q2ENV}; qiime emperor plot --i-pcoa ${Q2PC} --o-visualization ${EVENOUT}/${metric}_emperor.qzv --m-metadata-file ${MAPFP}"
+        PCOAJID=`echo "${Q2ENV}; qiime diversity pcoa --i-distance-matrix ${Q2DM} --o-pcoa ${Q2PC}" | qsub -N RRPCOA${depth}${metric} -l walltime=2:00:00 -W depend-afterok:${BDIVJID}`
+        EMPERORJID=`echo "${Q2ENV}; qiime emperor plot --i-pcoa ${Q2PC} --o-visualization ${EVENOUT}/${metric}_emperor.qzv --m-metadata-file ${MAPFP}" | qsub -N RREMP${depth}${metric} -l walltime=0:30:00 -W depend-afterok:${PCOAJID}`
 
         # Run beta correlation
-        echo "qiime diversity beta-correlation --i-distance-matrix ${Q2DM} --m-metadata-file ${MAPFP} --m-metadata-category ${MDCAT} --p-method spearman --p-permutations 999 --o-visualization ${EVENOUT}/bdiv_${metric}_corr.qzv"
+        BCORRJID=`echo "qiime diversity beta-correlation --i-distance-matrix ${Q2DM} --m-metadata-file ${MAPFP} --m-metadata-category ${MDCAT} --p-method spearman --p-permutations 999 --o-visualization ${EVENOUT}/bdiv_${metric}_corr.qzv" | qsub -N RRBCORR${depth}${metric} -l walltime=1:00:00 -W depend-afterok:${BDIVJID}`
 
         # Run beta group significance
-        echo "qiime diversity beta-group-significance --i-distance-matrix ${Q2DM} --m-metadata-file ${MDCAT} --m-metadata-category ${MDCAT} --p-method permanova --p-permutations 999 --o-visualization ${EVENOUT}/bdiv_${metric}_sig.qzv --p-pairwise"
+        BGSJID=`echo "qiime diversity beta-group-significance --i-distance-matrix ${Q2DM} --m-metadata-file ${MDCAT} --m-metadata-category ${MDCAT} --p-method permanova --p-permutations 999 --o-visualization ${EVENOUT}/bdiv_${metric}_sig.qzv --p-pairwise" | qsub -N RRBGS${depth}${metric} -l walltime=1:00:00 -W depend-afterok:${BDIVJID}`
     done
 
     # Run alpha diversity and alpha correlation
-    echo "${Q2ENV}; qiime diversity alpha-phylogenetic --i-phylogeny ${Q2TREE} --i-table ${Q2BIOM} --p-metric faith_pd --o-alpha-diversity ${EVENOUT}/adiv_faith.qza"
-    echo "qiime diversity alpha-correlation --i-alpha-diversity ${EVENOUT}/adiv_faith.qza --m-metadata-file ${MAPFP} --p-method spearman --o-visualization ${EVENOUT}/adiv_faith.qzv"
+    ADIVJID=`echo "${Q2ENV}; qiime diversity alpha-phylogenetic --i-phylogeny ${Q2TREE} --i-table ${Q2BIOM} --p-metric faith_pd --o-alpha-diversity ${EVENOUT}/adiv_faith.qza" | qsub -N RRADF${depth} -l walltime=2:00:00 -W depend-afterok:${EBIOMIMPJID}:${TREEIMPJID}`
+    ACORRJID=`echo "qiime diversity alpha-correlation --i-alpha-diversity ${EVENOUT}/adiv_faith.qza --m-metadata-file ${MAPFP} --p-method spearman --o-visualization ${EVENOUT}/adiv_faith.qzv" | qsub -N RRACORRF${depth} -l walltime=1:00:00 -W depend-afterok:${ADIVJID}`
 
     for metric in "shannon" "observed_otus" "pielou_e"
     do
-        echo "${Q2ENV}; qiime diversity alpha-phylogenetic --i-phylogeny ${Q2TREE} --i-table ${Q2BIOM} --p-metric faith_pd --o-alpha-diversity ${EVENOUT}/adiv_${metric}.qza"
-        echo "qiime diversity alpha-correlation --i-alpha-diversity ${EVENOUT}/adiv_${metric}.qza --m-metadata-file ${MAPFP} --p-method spearman --o-visualization ${EVENOUT}/adiv_${metric}.qzv"
+        ADIVJID=`echo "${Q2ENV}; qiime diversity alpha --i-table ${Q2BIOM} --p-metric ${metric} --o-alpha-diversity ${EVENOUT}/adiv_${metric}.qza" | qsub -N RRAD${depth}${metric} -l walltime=2:00:00 -W depend-afterok:${EBIOMIMPJID}`
+        ACORRJID=`echo "qiime diversity alpha-correlation --i-alpha-diversity ${EVENOUT}/adiv_${metric}.qza --m-metadata-file ${MAPFP} --p-method spearman --o-visualization ${EVENOUT}/adiv_${metric}.qzv" | qsub -N RRACORR${depth}${metric} -l walltime=1:00:00 -W depend-afterok:${ADIVJID}`
     done
 
     # Run taxa barplot
-    echo "${Q2ENV}; qiime taxa barplot --i-table ${Q2BIOM} --i-taxonomy ${Q2TAX} --m-metadata-file ${MAPFP} --o-visualization ${EVENOUT}/taxabarplot.qzv"
+    TBPJID=`echo "${Q2ENV}; qiime taxa barplot --i-table ${Q2BIOM} --i-taxonomy ${Q2TAX} --m-metadata-file ${MAPFP} --o-visualization ${EVENOUT}/taxabarplot.qzv" | qsub -N RRTBP${depth} -l walltime=1:00:00 -W depend-afterok:${EBIOMIMPJID}:${ETAXIMPPJID}`
 
     # Run differential abundance with ANCOM
-    echo "${Q2ENV}; qiime composition add-pseudocount --i-table ${Q2BIOM} --o-composition-table ${EVENOUT}/composition_biom.qza"
-    echo "${Q2ENV}; qiime composition ancom --i-table ${EVENOUT}/composition_biom.qza --m-metadata-file ${MAPFP} --m-metadata-category ${MDCAT} --o-visualization ${EVENOUT}/ancom.qzv"
+    CAPJID=`echo "${Q2ENV}; qiime composition add-pseudocount --i-table ${Q2BIOM} --o-composition-table ${EVENOUT}/composition_biom.qza" | qsub -N RRCAP${depth} -l walltime=1:00:00 -W depend-afterok:${EBIOMIMPJID}`
+    CANCJID=`echo "${Q2ENV}; qiime composition ancom --i-table ${EVENOUT}/composition_biom.qza --m-metadata-file ${MAPFP} --m-metadata-category ${MDCAT} --o-visualization ${EVENOUT}/ancom.qzv" | qsub -N RRANC${depth} -l walltime=1:00:00 -W depend-afterok:${CAPJID}`
 done
