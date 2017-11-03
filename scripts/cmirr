@@ -32,6 +32,7 @@ def cmirr():
 def export_taxonomy(input_biom, output_taxa):
     biom_table = load_table(input_biom)
     with open(output_taxa, 'w') as f:
+        f.write("Feature ID\tTaxon\n")
         for line in taxonomy_exporter(biom_table):
             f.write(line)
 
