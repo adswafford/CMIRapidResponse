@@ -1,0 +1,244 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-US">
+  <head>
+    <title>CMI Rapid Response</title>
+    <link rel="stylesheet" href="./css/bootstrap.min.css" type="text/css">
+    <link rel="stylesheet" href="./css/bootstrap-theme.min.css" type="text/css">
+    <link rel="stylesheet" href="./css/cmirr.css" type="text/css">
+    <script src="./js/jquery-2.1.0.min.js"></script>
+    <script src="./js/bootstrap.min.js"></script>
+    <script>
+
+      function change_bdiv(elem) {
+        var depth = $(elem).attr('data-cmi-depth');
+        $('#bdivObject' + depth).attr('data', './results/even' + depth + '/' + $(elem).find(':selected')[0].value + '/index.html');
+      };
+
+      function change_adiv(elem) {
+        var depth = $(elem).attr('data-cmi-depth');
+        $('#adivObject' + depth).attr('data', './results/even' + depth + '/' + $(elem).find(':selected')[0].value + '/index.html');
+      };
+    </script>
+  </head>
+
+  <body>
+    <!-- Header -->
+    <nav class="navbar navbar-default" style="height:100px">
+      <div class="container-fluid">
+        <div class="navbar-header">
+          <ul class="nav navbar-nav">
+            <li>
+              <a class="navbar-brand" href="#">
+                <img style="max-height:75px;" alt="Brand" src="./images/CMIlogo.png">
+              </a>
+            </li>
+            <li>
+              <h1>Rapid Response report (research use only)</h1>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Tabs -->
+    <div class="container" style="width:100%;">
+      <ul  class="nav nav-pills">
+        <li class="active"><a  href="#overview" data-toggle="tab">Overview</a></li>
+        <li><a href="#even1000" data-toggle="tab">Even sampled 1000</a></li>
+			  <li><a href="#even5000" data-toggle="tab">Even sampled 5000</a></li>
+  		  <li><a href="#even10000" data-toggle="tab">Even sampled 10000</a></li>
+		  </ul>
+
+			<div class="tab-content clearfix" style="background-color: white;">
+        <!-- Overview -->
+			  <div class="tab-pane active" id="overview">
+          <h4>In this section we have an overview of the BIOM table generated. Navigate to the "Even sampled XXXX" tabs to see specific analysis performed.</h4>
+          <object type="text/html" data="./results/biom_summary/index.html" style="width:100%; height:75vh;"></object>
+				</div>
+
+        <!-- Even 1000 -->
+				<div class="tab-pane" id="even1000">
+          <div class="panel-group" id="accordion1000">
+            <div class="panel panel-default">
+              <div class="panel-heading">
+                <h4 class="panel-title"><a data-toggle="collapse" data-parent="#accordion" href="#taxa1000">Taxonomy bar plots</a></h4>
+              </div>
+              <div id="taxa1000" class="panel-collapse collapse">
+                <div class="panel-body" style="height:110vh;">
+                  <object type="text/html" data="./results/even1000/taxabarplot/index.html" style="width:100%; height:100%;"></object>
+                </div>
+              </div>
+            </div>
+            <div class="panel panel-default">
+              <div class="panel-heading">
+                <h4 class="panel-title"><a data-toggle="collapse" data-parent="#accordion" href="#bdiv1000">Beta diversity results</a></h4>
+              </div>
+              <div id="bdiv1000" class="panel-collapse collapse">
+                <div class="panel-body" style="height:110vh;">
+                  <div class="form-group">
+                    <label for="bdivMetric1000">Select metric:</label>
+                    <select class="form-control" id="bdivMetric1000" data-cmi-depth="1000" onchange="change_bdiv(this);">
+                      <option value="unweighted_unifrac">Unweighted UniFrac</option>
+                      <option value="weighted_unifrac">Weighted UniFrac</option>
+                    </select>
+                  </div>
+                  <object id="bdivObject1000" type="text/html" data="./results/even1000/unweighted_unifrac/index.html" style="width:100%; height:100%;"></object>
+                </div>
+              </div>
+            </div>
+            <div class="panel panel-default">
+              <div class="panel-heading">
+                <h4 class="panel-title"><a data-toggle="collapse" data-parent="#accordion" href="#adiv1000">Alpha diversity results</a></h4>
+              </div>
+              <div id="adiv1000" class="panel-collapse collapse">
+                <div class="panel-body" style="height:130vh;">
+                  <div class="form-group">
+                    <label for="adivMetric1000">Select metric:</label>
+                    <select class="form-control" id="adivMetric1000" data-cmi-depth="1000" onchange="change_adiv(this);">
+                      <option value="adiv_observed_otus">Observed Otus</option>
+                      <option value="adiv_pielou_e">Pielou Evennes</option>
+                      <option value="adiv_shannon">Shannon Diversity</option>
+                    </select>
+                  </div>
+                  <object id="adivObject1000" type="text/html" data="./results/even1000/adiv_observed_otus/index.html" style="width:100%; height:100%;"></object>
+                </div>
+              </div>
+            </div>
+            <div class="panel panel-default">
+              <div class="panel-heading">
+                <h4 class="panel-title"><a data-toggle="collapse" data-parent="#accordion" href="#ancom1000">Differential abundance</a></h4>
+              </div>
+              <div id="ancom1000" class="panel-collapse collapse">
+                <div class="panel-body" style="height:110vh;">
+                  <object id="ancomObject1000" type="text/html" data="./results/even1000/ancom/index.html" style="width:100%; height:100%;"></object>
+                </div>
+              </div>
+            </div>
+          </div>
+				</div>
+
+        <!-- Even 5000 -->
+        <div class="tab-pane" id="even5000">
+          <div class="panel-group" id="accordion5000">
+            <div class="panel panel-default">
+              <div class="panel-heading">
+                <h4 class="panel-title"><a data-toggle="collapse" data-parent="#accordion" href="#taxa5000">Taxonomy bar plots</a></h4>
+              </div>
+              <div id="taxa5000" class="panel-collapse collapse">
+                <div class="panel-body" style="height:110vh;">
+                  <object type="text/html" data="./results/even5000/taxabarplot/index.html" style="width:100%; height:100%;"></object>
+                </div>
+              </div>
+            </div>
+            <div class="panel panel-default">
+              <div class="panel-heading">
+                <h4 class="panel-title"><a data-toggle="collapse" data-parent="#accordion" href="#bdiv5000">Beta diversity results</a></h4>
+              </div>
+              <div id="bdiv5000" class="panel-collapse collapse">
+                <div class="panel-body" style="height:110vh;">
+                  <div class="form-group">
+                    <label for="bdivMetric5000">Select metric:</label>
+                    <select class="form-control" id="bdivMetric5000" data-cmi-depth="5000" onchange="change_bdiv(this);">
+                      <option value="unweighted_unifrac">Unweighted UniFrac</option>
+                      <option value="weighted_unifrac">Weighted UniFrac</option>
+                    </select>
+                  </div>
+                  <object id="bdivObject5000" type="text/html" data="./results/even5000/unweighted_unifrac/index.html" style="width:100%; height:100%;"></object>
+                </div>
+              </div>
+            </div>
+            <div class="panel panel-default">
+              <div class="panel-heading">
+                <h4 class="panel-title"><a data-toggle="collapse" data-parent="#accordion" href="#adiv5000">Alpha diversity results</a></h4>
+              </div>
+              <div id="adiv5000" class="panel-collapse collapse">
+                <div class="panel-body" style="height:130vh;">
+                  <div class="form-group">
+                    <label for="adivMetric5000">Select metric:</label>
+                    <select class="form-control" id="adivMetric5000" data-cmi-depth="5000" onchange="change_adiv(this);">
+                      <option value="adiv_observed_otus">Observed Otus</option>
+                      <option value="adiv_pielou_e">Pielou Evennes</option>
+                      <option value="adiv_shannon">Shannon Diversity</option>
+                    </select>
+                  </div>
+                  <object id="adivObject5000" type="text/html" data="./results/even5000/adiv_observed_otus/index.html" style="width:100%; height:100%;"></object>
+                </div>
+              </div>
+            </div>
+            <div class="panel panel-default">
+              <div class="panel-heading">
+                <h4 class="panel-title"><a data-toggle="collapse" data-parent="#accordion" href="#ancom5000">Differential abundance</a></h4>
+              </div>
+              <div id="ancom5000" class="panel-collapse collapse">
+                <div class="panel-body" style="height:110vh;">
+                  <object id="ancomObject5000" type="text/html" data="./results/even5000/ancom/index.html" style="width:100%; height:100%;"></object>
+                </div>
+              </div>
+            </div>
+          </div>
+				</div>
+
+        <!-- Even 10000 -->
+        <div class="tab-pane" id="even10000">
+          <div class="panel-group" id="accordion10000">
+            <div class="panel panel-default">
+              <div class="panel-heading">
+                <h4 class="panel-title"><a data-toggle="collapse" data-parent="#accordion" href="#taxa10000">Taxonomy bar plots</a></h4>
+              </div>
+              <div id="taxa10000" class="panel-collapse collapse">
+                <div class="panel-body" style="height:110vh;">
+                  <object type="text/html" data="./results/even10000/taxabarplot/index.html" style="width:100%; height:100%;"></object>
+                </div>
+              </div>
+            </div>
+            <div class="panel panel-default">
+              <div class="panel-heading">
+                <h4 class="panel-title"><a data-toggle="collapse" data-parent="#accordion" href="#bdiv10000">Beta diversity results</a></h4>
+              </div>
+              <div id="bdiv10000" class="panel-collapse collapse">
+                <div class="panel-body" style="height:110vh;">
+                  <div class="form-group">
+                    <label for="bdivMetric10000">Select metric:</label>
+                    <select class="form-control" id="bdivMetric10000" data-cmi-depth="10000" onchange="change_bdiv(this);">
+                      <option value="unweighted_unifrac">Unweighted UniFrac</option>
+                      <option value="weighted_unifrac">Weighted UniFrac</option>
+                    </select>
+                  </div>
+                  <object id="bdivObject10000" type="text/html" data="./results/even10000/unweighted_unifrac/index.html" style="width:100%; height:100%;"></object>
+                </div>
+              </div>
+            </div>
+            <div class="panel panel-default">
+              <div class="panel-heading">
+                <h4 class="panel-title"><a data-toggle="collapse" data-parent="#accordion" href="#adiv10000">Alpha diversity results</a></h4>
+              </div>
+              <div id="adiv10000" class="panel-collapse collapse">
+                <div class="panel-body" style="height:130vh;">
+                  <div class="form-group">
+                    <label for="adivMetric10000">Select metric:</label>
+                    <select class="form-control" id="adivMetric10000" data-cmi-depth="10000" onchange="change_adiv(this);">
+                      <option value="adiv_observed_otus">Observed Otus</option>
+                      <option value="adiv_pielou_e">Pielou Evennes</option>
+                      <option value="adiv_shannon">Shannon Diversity</option>
+                    </select>
+                  </div>
+                  <object id="adivObject10000" type="text/html" data="./results/even10000/adiv_observed_otus/index.html" style="width:100%; height:100%;"></object>
+                </div>
+              </div>
+            </div>
+            <div class="panel panel-default">
+              <div class="panel-heading">
+                <h4 class="panel-title"><a data-toggle="collapse" data-parent="#accordion" href="#ancom10000">Differential abundance</a></h4>
+              </div>
+              <div id="ancom10000" class="panel-collapse collapse">
+                <div class="panel-body" style="height:110vh;">
+                  <object id="ancomObject10000" type="text/html" data="./results/even10000/ancom/index.html" style="width:100%; height:100%;"></object>
+                </div>
+              </div>
+            </div>
+          </div>
+				</div>
+			</div>
+    </div>
+  </body>
+</html>
