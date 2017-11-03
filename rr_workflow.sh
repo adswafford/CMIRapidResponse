@@ -89,7 +89,7 @@ ADDMETAJID=`echo "${Q1ENV}; biom add-metadata -i ${DEBLUROUT}/reference-hit.biom
 
 # Generate a phylogenetic tree with SEPP
 SEPPOUT=${OUTDIR}/sepp_out
-SEPPJID=`echo "${SEPPENV}; mkdir ${SEPPOUT}; cd ${SEPPOUT}; run-sepp.sh ${DEBLUROUT}/reference-hit.seqs.fa reference-hit -x ${NUMJOBS}" | qsub -N RRSEPP -l walltime=2:00:00 -l nodes=1:ppn=${NUMJOBS} -W depend=afterok:${DEBLURJID} ${PBSMAIL}`
+SEPPJID=`echo "${SEPPENV}; mkdir ${SEPPOUT}; cd ${SEPPOUT}; run-sepp.sh ${DEBLUROUT}/reference-hit.seqs.fa reference-hit -x ${NUMJOBS}" | qsub -N RRSEPP -l walltime=2:00:00 -l nodes=1:ppn=${NUMJOBS} -l mem=64gb -W depend=afterok:${DEBLURJID} ${PBSMAIL}`
 # Import the tree for QIIME 2
 Q2TREE=${OUTDIR}/reference-hit-tree.qza
 TREEIMPJID=`echo "${Q2ENV}; qiime tools import --input-path ${SEPPOUT}/reference-hit_placement.tog.relabelled.tre --output-path ${Q2TREE} --type \"Phylogeny[Rooted]\"" | qsub -N RRTREEIMP -l walltime=0:10:00 -W depend=afterok:${SEPPJID} ${PBSMAIL}`
